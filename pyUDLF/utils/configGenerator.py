@@ -296,5 +296,5 @@ def list_info_selected_method(method, parameters, list_parameters):
                 print("{} = {} #{}".format(param,
                     parameters[param][0], parameters[param][1]))
             else:
-                print("{} = {}".format(list_parameters[i],
-                    parameters[list_parameters[i]][0]))
+                print("{} = {}".format(param,
+                    parameters[param][0]))

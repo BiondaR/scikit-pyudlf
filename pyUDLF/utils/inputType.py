@@ -7,6 +7,8 @@ from pyUDLF.utils.visualization import render_ranked_list
 from pathlib import Path
 logger = get_logger(__name__)
 
+__all__ = ["InputType"]
+
 class InputType:
     """
     Handle the input configuration for UDLF executions.
@@ -960,51 +962,3 @@ class InputType:
             save=False,
             start_element=start_element
         )
-
- 
-    # def show_input_rk(self, line: int, rk_size: int = 10,
-    #                 images_shape: tuple[int, int] = (0, 0),
-    #                 start_element: int = 0):
-    #     """
-    #     Show an input ranked list (before processing) as concatenated images.
-
-    #     Args:
-    #         line (int): line index in the ranked list file (query index).
-    #         rk_size (int): number of retrieved elements to show.
-    #         images_shape (tuple[int, int]): resize shape (w,h). If (0,0), use min size.
-    #         start_element (int): starting index offset for the ranked list.
-
-    #     Returns:
-    #         PIL.Image.Image: the combined image for visualization.
-    #     """
-    #     rk_path = self.parameters.get("INPUT_FILE")[0]
-    #     list_path = self.get_lists_file()[0]
-    #     classes_path = self.get_classes_file()[0]
-    #     images_path = self.get_input_images_path()[0]
-    #     print(rk_path, list_path, classes_path, images_path)
-
-    #     # --- Validate presence and existence ---
-    #     paths = {
-    #         "INPUT_FILE (ranked list)": (rk_path, Path(rk_path).is_file() if rk_path else False),
-    #         "INPUT_FILE_LIST": (list_path, Path(list_path).is_file() if list_path else False),
-    #         "INPUT_FILE_CLASSES": (classes_path, Path(classes_path).is_file() if classes_path else False),
-    #         "INPUT_IMAGES_PATH": (images_path, Path(images_path).is_dir() if images_path else False),
-    #     }
-
-    #     for name, (p, exists) in paths.items():
-    #         if not p or not isinstance(p, str):
-    #             raise ValueError(f"{name} is not defined or not a valid string: {p}")
-    #         if not exists:
-    #             raise FileNotFoundError(f"{name} does not exist at: {p}")
-
-    #     return render_ranked_list(
-    #         rk_path=rk_path,
-    #         list_path=list_path,
-    #         classes_path=classes_path,
-    #         images_path=images_path,
-    #         line=line,
-    #         rk_size=rk_size,
-    #         images_shape=images_shape,
-    #         save=False,
-    #         start_element=start_element
-    #     )

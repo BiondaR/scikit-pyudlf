@@ -174,7 +174,7 @@ METHOD_PARAMS = {
     "RLRECOM": {
         "l": {"param": "PARAM_RLRECOM_L", "default": 400, "type": int},
         "k": {"param": "PARAM_RLRECOM_K", "default": 8, "type": int},
-        "lambda": {"param": "PARAM_RLRECOM_LAMBDA", "default": 2.0, "type": float},
+        "lambda_val": {"param": "PARAM_RLRECOM_LAMBDA", "default": 2.0, "type": float},
         "epsilon": {"param": "PARAM_RLRECOM_EPSILON", "default": 0.0125, "type": float},
     },
     "RLSIM": {
@@ -306,10 +306,12 @@ def validate_path(value: str, must_exist: bool = False) -> str:
 
     # Basic forbidden characters (expand if needed)
     forbidden = [' ', '(', ')', '[', ']', '{', '}', ';', '"', "'"]
-    if any(ch in path_str for ch in forbidden):
+    if ' ' in path_str:
         raise ValueError(
-            f"Invalid path '{path_str}'. It contains spaces or forbidden characters."
+            f"Path '{path_str}' contains spaces. Rename the directory or use underscores."
         )
+    if any(ch in path_str for ch in forbidden[1:]):
+        raise ValueError(f"Path '{path_str}' contains forbidden characters: {forbidden[1:]}")
 
     # Optional existence check
     if must_exist and not path.exists():

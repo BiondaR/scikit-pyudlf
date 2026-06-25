@@ -20,6 +20,8 @@ from pyUDLF.utils.logger import get_logger
 #     logger.setLevel(logging.INFO)
 logger = get_logger(__name__)
 
+__all__ = ["setBinaryPath", "getBinaryPath", "setConfigPath", "getConfigPath", "runWithConfig", "run", "verify_bin"]
+
 # ---------- Paths ----------
 user_home = Path.home()
 pyudlf_dir = user_home / ".pyudlf"
@@ -201,6 +203,13 @@ def verify_bin(config_path: str, bin_path: str) -> None:
         return
     logger.debug(f"Extraction complete, checking for binary at {bin_path}")
 
+    if not os.path.isfile(bin_path):
+        logger.error("Extraction completed but binary not found at: %s", bin_path)
+        return
+    if operating_system == "linux":
+        os.chmod(bin_path, 0o755)  # garante permissão de execução no Linux
+    logger.info("Binary verified at: %s", bin_path)
+
 
 def run_platform(config_file: str, bin_path: str):
     """
@@ -242,13 +251,8 @@ def run_platform(config_file: str, bin_path: str):
         return False, path_log_out
 
     # Verify run completed successfully
-    run_ok = verify_running(path_log_out)
-    if not run_ok:
-        logger.info("UDLF run successfully.")
-    else:
-        logger.warning("UDLF run did not complete as expected.")
-
-    return run_ok, path_log_out
+    has_errors = verify_running(path_log_out)
+    return has_errors, path_log_out 
 
 def verify_running(path: str) -> bool:
     """
@@ -343,6 +347,13 @@ def individual_gain_config_running(config_file: str, depth: int = -1):
         logger.error("Output file must be ranked list type (RK).")
         return None
 
+    if not params.get("before_path"):
+        logger.error("Could not resolve input ranked list path from config.")
+        return None
+    if not params.get("after_path"):
+        logger.error("Could not resolve output ranked list path from config.")
+        return None
+
     # --- Handle depth ---
     if depth == -1:
         logger.warning("Depth not set, using dataset size instead.")
@@ -428,12 +439,12 @@ def prepare_visualization(params: dict, output: "OutputType") -> bool:
         logger.warning(f"Images directory does not exist: {img_path}")
         return False
     
-    if not os.path.isdir(list_path):
-        logger.warning(f"List file does not exist: {img_path}")
+    if not os.path.isfile(list_path):
+        logger.warning("List file does not exist: %s", list_path)
         return False
-    
-    if not os.path.isdir(classes_path):
-        logger.warning(f"Classes file does not exist: {img_path}")
+
+    if not os.path.isfile(classes_path):
+        logger.warning("Classes file does not exist: %s", classes_path)
         return False
 
     # If everything is valid, update output
@@ -461,9 +472,9 @@ def runWithConfig(
         return False
 
     # Step 2: run platform
-    run_ok, log_out_path = run_platform(config_file, bin_path)
-    if run_ok:
-        logger.error("UDLF execution failed.")
+    has_errors, log_out_path = run_platform(config_file, bin_path)
+    if has_errors:
+        logger.error("UDLF execution failed. Check log: %s", log_out_path)
         return False
     logger.info("pyUDLF execution complete!")
 

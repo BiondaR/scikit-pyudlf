@@ -71,15 +71,20 @@ def parse_config(config_file: str) -> dict:
             params["out_rk_format"] = line.split("=")[1].split("#")[0].strip()
 
         elif line.startswith("OUTPUT_FILE_PATH"):
-            base = line.split("=")[1].split("#")[0].strip()
-            if params["out_file_format"] == "RK":
-                params["rk_path"] = f"{base}.txt"
-            elif params["out_file_format"] == "MATRIX":
-                params["matrix_path"] = f"{base}.txt"
-            params["after_path"] = f"{base}.txt"  # useful for before/after comparison
+            params["_output_file_path_base"] = line.split("=")[1].split("#")[0].strip()
 
         elif line.startswith("OUTPUT_LOG_FILE_PATH"):
             params["log_path"] = line.split("=")[1].split("#")[0].strip()
+
+    # segunda passagem: resolver paths que dependem de outros campos
+    base = params.get("_output_file_path_base", "")
+    if base:
+        if params["out_file_format"] == "RK":
+            params["rk_path"] = f"{base}.txt"
+            params["after_path"] = f"{base}.txt"
+        elif params["out_file_format"] == "MATRIX":
+            params["matrix_path"] = f"{base}.txt"
+            params["after_path"] = f"{base}.txt"
 
     return params
     

@@ -1,3 +1,6 @@
+from pyUDLF.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 def read_config(path):
     """
@@ -48,7 +51,8 @@ def read_log(path):
     with open(path, 'r') as f:
         lines = [x.strip() for x in f.readlines()]
 
-        for i in range(len(lines)):
+        i = 0
+        while i < len(lines):
             if "Task" in lines[i]:
                 line = lines[i].split(':')
                 metodo = line[1].strip()
@@ -99,6 +103,7 @@ def read_log(path):
                             [("Before", before[j]),
                              ("After", after[j]),
                              ("Gain", gains[j])])
+            i += 1
     return log_parameters
 
 
@@ -113,7 +118,7 @@ def read_ranked_lists_file_numeric(file_path, top_k=-1):
     Returns:
         list: A ranked list with image numbers.
     """
-    print("\n\tReading file...", file_path)
+    logger.debug("\n\tReading file... %s", file_path)
     
     with open(file_path, "r") as f:
         ranked_list = [line.strip().split(" ") for line in f]
@@ -124,9 +129,9 @@ def read_ranked_lists_file_numeric(file_path, top_k=-1):
             ranked_list[i] = ranked_list[i][:top_k]
 
     if top_k != -1:
-        print("\n\t** Returned ranked list size (limited to top_k):", len(ranked_list[0]))
+        logger.debug("\n\t** Returned ranked list size (limited to top_k): %d", len(ranked_list[0]))
     else:
-        print("\n\t** Returned all the ranked list with size:", len(ranked_list[0]))
+        logger.debug("\n\t** Returned all the ranked list with size: %d", len(ranked_list[0]))
     
     return ranked_list
 
@@ -142,7 +147,7 @@ def read_ranked_lists_file_string(file_path, top_k=-1):
     Returns:
         list: A ranked list with image numbers.
     """
-    print("\n\tReading file...", file_path)
+    logger.debug("\n\tReading file... %s", file_path)
     
     with open(file_path, "r") as f:
         ranked_list = [line.strip().split(" ") for line in f]
@@ -153,9 +158,9 @@ def read_ranked_lists_file_string(file_path, top_k=-1):
             ranked_list[i] = ranked_list[i][:top_k]
 
     if top_k != -1:
-        print("\n\t** Returned ranked list size (limited to top_k):", len(ranked_list[0]))
+        logger.debug("\n\t** Returned ranked list size (limited to top_k): %d", len(ranked_list[0]))
     else:
-        print("\n\t** Returned all the ranked list with size:", len(ranked_list[0]))
+        logger.debug("\n\t** Returned all the ranked list with size: %d", len(ranked_list[0]))
     
     return ranked_list
 
@@ -188,13 +193,12 @@ def read_classes(lists_path="", classes_path="", input_type=None):
         lists_path = str(input_type.get_lists_file()[0].strip())
 
     # lê o lists
-    f = open(lists_path)
-    lists = [x.strip() for x in f.readlines()]
-    f.close()
+    with open(lists_path, 'r') as f:
+        lists = [line.strip() for line in f]
 
     # lê as classes em um dicionário
-    f = open(classes_path)
-    content = [x.strip() for x in f.readlines()]
+    with open(classes_path, 'r') as f:
+        content = [line.strip() for line in f]
     classes_dict = dict()
     for line in content:
         key = line.split(':')[0]

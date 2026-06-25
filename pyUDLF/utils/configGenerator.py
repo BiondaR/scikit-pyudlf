@@ -2,7 +2,9 @@ from pyUDLF.utils import readData
 from pyUDLF.utils import writeData
 import os.path
 import re
+from pyUDLF.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 def initParameters(config_path, parameters, list_parameters):
     """
@@ -31,11 +33,11 @@ def write_input_files(data, path):
     data_paths = []
     cont = 1
     for i in range(len(data)):
-        temp = os.path.join("/rks_", cont)
+        temp = f"rks_{cont}.txt"
         aux = os.path.join(path, temp)
         while os.path.isfile(aux):
             cont = cont + 1
-            temp = os.path.join("/rks_", cont)
+            temp = f"rks_{cont}.txt"
             aux = os.path.join(path, temp)
 
         data_paths.append(aux)
@@ -70,7 +72,7 @@ def setParameter(param, value, parameters):
             parameters[param][1] = aux[1]
         # print("{} insert with sucess".format(param))
     else:
-        print("{} does not exist in parameters!".format(param))
+        logger.warning("%s does not exist in parameters!", param)
 
 
 def getParameter(param, parameters):
@@ -88,7 +90,7 @@ def getParameter(param, parameters):
     if param in parameters:
         return parameters[param]
     else:
-        print("{} does not exist in parameters!".format(param))
+        logger.warning("%s does not exist in parameters!", param)
 
 
 def new_parameters(param, value, parameters, list_parameters):
@@ -110,7 +112,7 @@ def new_parameters(param, value, parameters, list_parameters):
         parameters[param] = list
         list_parameters.append(param)
     else:
-        print("Parameters already exist")
+        logger.warning("Parameters already exist")
 
 
 def writeConfig(parameters, list_parameters, path="new_config.ini"):
@@ -259,7 +261,7 @@ def new_fusion_parameter(value, parameters, list_parameters):
     """
     """
     if (parameters["UDL_TASK"][0] == "UDL"):
-        print("ERROR, not fusion")
+        logger.warning("ERROR, not fusion")
         return
 
     i = 0
@@ -270,7 +272,7 @@ def new_fusion_parameter(value, parameters, list_parameters):
         aux_value = value
         tam = len(value)
     else:
-        print("Type Error !")
+        logger.warning("Type Error !")
         return
 
     cont = 0
@@ -288,11 +290,11 @@ def new_fusion_parameter(value, parameters, list_parameters):
 def list_info_selected_method(method, parameters, list_parameters):
     aux = "PARAM_{}".format(method.upper().strip())
     print("...Listing {} information...".format(method.upper()))
-    for i in range(len(parameters)):
-        if aux in list_parameters[i]:
-            if len(parameters[list_parameters[i]]) > 2:
-                print("{} = {} #{}".format(list_parameters[i],
-                    parameters[list_parameters[i]][0], parameters[list_parameters[i]][1]))
+    for param in list_parameters:
+        if aux in param:
+            if len(parameters[param]) > 2:
+                print("{} = {} #{}".format(param,
+                    parameters[param][0], parameters[param][1]))
             else:
                 print("{} = {}".format(list_parameters[i],
                     parameters[list_parameters[i]][0]))

@@ -4,8 +4,6 @@ Originally developed by **Gustavo Rosseto Leticio**, **Lucas Pascotti Valem** an
 
 Bug fixes by **Bionda Rozin**.
 
-> For the full list of changes in this branch, see [`FIXES_pyudlf.md`](FIXES_pyudlf.md).
-
 ---
 
 ## Overview
@@ -22,8 +20,9 @@ All heavy computation runs in the UDLF binary. pyUDLF handles configuration, exe
 ## Installation
 
 ```bash
-git clone https://github.com/your-fork/pyUDLF.git
-cd pyUDLF
+git clone https://github.com/BiondaR/scikit-pyudlf.git
+cd scikit-pyudlf
+git checkout og/bugfixes
 pip install -r requirements.txt
 python setup.py install
 ```

@@ -8,6 +8,9 @@ from pyUDLF.utils import readData, outputType, evaluation, parser
 import sys
 import zipfile
 from pyUDLF.utils.logger import get_logger
+import shutil  # adiciona se não tiver
+
+UDLF_REPO = "https://github.com/UDLF/UDLF.git"
 
 
 # ---------- Logger configuration ----------
@@ -20,7 +23,7 @@ from pyUDLF.utils.logger import get_logger
 #     logger.setLevel(logging.INFO)
 logger = get_logger(__name__)
 
-__all__ = ["setBinaryPath", "getBinaryPath", "setConfigPath", "getConfigPath", "runWithConfig", "run", "verify_bin"]
+__all__ = ["setBinaryPath", "getBinaryPath", "setConfigPath", "getConfigPath", "runWithConfig", "run", "verify_bin", "build_udlf_from_source"]
 
 # ---------- Paths ----------
 user_home = Path.home()

@@ -1,4 +1,4 @@
-# pyUDLF — bugfix branch
+# pyUDLF — gitclone branch (UNDER DEVELOPMENT! Visit the og/bugfix branch)
 
 Originally developed by **Gustavo Rosseto Leticio**, **Lucas Pascotti Valem** and **Daniel Carlos Guimarães Pedronette** (Universidade Estadual Paulista — UNESP, Rio Claro, Brazil).
 

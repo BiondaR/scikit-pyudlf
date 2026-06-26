@@ -148,6 +148,7 @@ input_data.set_dataset_size(1400)
 # Output
 input_data.set_output_file(True)
 input_data.set_output_file_format("RK")   # "RK" or "MATRIX"
+input_data.set_output_rk_format("NUM")
 input_data.set_output_file_path("./output")
 input_data.set_output_log_file_path("./log.txt")
 

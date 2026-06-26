@@ -569,3 +569,26 @@ def run(
             os.remove(input_path)
             logger.debug(f"Temporary config removed: {input_path}")
 
+def build_udlf_from_source(install_path: str, branch: str = "master") -> bool:
+    install_path = Path(install_path)
+    repo_path = install_path / "UDLF"
+
+    # clona a branch escolhida
+    subprocess.run(
+        ["git", "clone", "--branch", branch, "--depth", "1",
+         UDLF_REPO, str(repo_path)],
+        check=True
+    )
+
+    # compila — make já sabe onde colocar o binário (bin/udlf)
+    subprocess.run(["make"], cwd=repo_path, check=True)
+
+    # copia binário e config pro install_path
+    compiled_bin = repo_path / "bin" / "udlf"
+    compiled_config = repo_path / "bin" / "config.ini"
+
+    dest = install_path / "bin"
+    dest.mkdir(exist_ok=True)
+    shutil.copy(compiled_bin, dest / "udlf")
+    shutil.copy(compiled_config, dest / "config.ini")
+    os.chmod(str(dest / "udlf"), 0o755)

@@ -1,10 +1,10 @@
-# pyUDLF — gitclone branch (UNDER DEVELOPMENT! Visit the og/bugfix branch)
+# pyUDLF — gitclone branch
 
 Originally developed by **Gustavo Rosseto Leticio**, **Lucas Pascotti Valem** and **Daniel Carlos Guimarães Pedronette** (Universidade Estadual Paulista — UNESP, Rio Claro, Brazil).
 
-Bug fixes by **Bionda Rozin**.
+Bug fixes and extensions by **Bionda Rozin**.
 
-> For the full list of changes in this branch, see [`FIXES_pyudlf.md`](FIXES_pyudlf.md).
+> This branch extends the [og/bugfixes branch](https://github.com/BiondaR/scikit-pyudlf/tree/og/bugfixes) with support for building the UDLF binary from source. If you just want to use pyUDLF normally, the bugfix branch is the right place — it downloads a pre-compiled binary automatically and requires no additional dependencies.
 
 ---
 
@@ -12,23 +12,105 @@ Bug fixes by **Bionda Rozin**.
 
 pyUDLF is a Python wrapper for [UDLF](https://github.com/UDLF/UDLF) (Unsupervised Distance Learning Framework), a C++ library implementing graph- and rank-based re-ranking methods that refine distance/similarity structures without supervision.
 
-All heavy computation runs in the UDLF binary. pyUDLF handles configuration, execution, and result parsing — no manual `.ini` editing required. If the binary is not found at the configured path, it is downloaded automatically.
+All heavy computation runs in the UDLF binary. pyUDLF handles configuration, execution, and result parsing — no manual `.ini` editing required.
 
-> **⚠️ macOS is not supported.** The UDLF binary is only available for Linux and Windows (x86_64).  
+This branch adds `build_udlf_from_source()`, which clones the UDLF repository and compiles the binary locally. This gives you access to two builds:
+
+- **`master`** — same codebase as the pre-compiled binary available in the bugfix branch
+- **`openmp`** — compiled with `-fopenmp`, enabling multi-threaded parallel execution and faster runtimes on multi-core machines
+
 > **⚠️ Paths with spaces are not supported.** The UDLF binary does not handle spaces in file paths. Use underscores instead.
+
+---
+
+## When to use this branch
+
+Use `build_udlf_from_source()` if:
+- you want the **OpenMP build** for faster execution
+- you are on **macOS**, where no pre-compiled binary is available (`master` branch only)
+- you want to compile from source for any other reason (custom flags, auditing, etc.)
+
+Otherwise, the bugfix branch handles everything automatically.
+
+---
+
+## Additional requirements
+
+Beyond the base requirements (`numpy`, `Pillow`, `requests`), building from source requires:
+
+- `git` — to clone the UDLF repository
+- `g++` with C++14 support — to compile
+
+**Linux:**
+```bash
+sudo apt install git g++
+```
+
+**macOS:**
+```bash
+xcode-select --install   # installs git and clang++ (aliased as g++)
+```
+
+**Windows:** not supported by `build_udlf_from_source()`. The pre-compiled binary is downloaded automatically via the standard flow — no compilation needed.
 
 ---
 
 ## Installation
 
 ```bash
-git clone https://github.com/your-fork/pyUDLF.git
-cd pyUDLF
+git clone https://github.com/BiondaR/scikit-pyudlf.git
+cd scikit-pyudlf
+git checkout og/gitclone
 pip install -r requirements.txt
 python setup.py install
 ```
 
-**Requirements:** Python 3.10+, `numpy`, `Pillow`, `requests`.
+---
+
+## Building the UDLF binary
+
+```python
+from pyUDLF import run_calls as udlf
+
+# Build master branch (same as pre-compiled binary)
+udlf.build_udlf_from_source('/path/to/install', branch='master')
+
+# Build OpenMP branch (parallel execution, faster on multi-core)
+udlf.build_udlf_from_source('/path/to/install', branch='openmp')
+```
+
+The function clones the UDLF repository, compiles it with `make`, copies the binary and `config.ini` to `install_path/bin/`, and removes the cloned repository. Nothing is left behind except the compiled binary.
+
+Example output for `branch='openmp'`:
+
+```
+[INFO] Clonando UDLF branch 'openmp'...
+[INFO] Compilando...
+g++ -I./src -std=gnu++14 -O3 -fopenmp -c src/Core/Main.cpp -o obj/Main.o
+...
+g++ -I./src -std=gnu++14 -O3 -fopenmp ... -o bin/udlf
+[INFO] Binário instalado em: /path/to/install/bin/udlf
+[INFO] Repositório removido: /path/to/install/UDLF
+```
+
+After building, point pyUDLF to the new binary:
+
+```python
+udlf.setBinaryPath('/path/to/install/bin/udlf')
+udlf.setConfigPath('/path/to/install/bin/config.ini')
+```
+
+---
+
+## OS compatibility
+
+| OS | Pre-compiled binary | `master` build | `openmp` build |
+|----|---------------------|----------------|----------------|
+| Linux | ✅ | ✅ | ✅ |
+| Windows | ✅ | ❌ | ❌ |
+| macOS | ❌ | ✅ | ❌ |
+
+macOS users must build from source. The `openmp` branch is not supported on macOS because Apple's `clang++` does not support `-fopenmp` natively. Use `branch='master'` instead.
 
 ---
 
@@ -40,10 +122,10 @@ python setup.py install
 from pyUDLF import run_calls as udlf
 from pyUDLF.utils import inputType as it
 
-# Optional: set custom paths to the binary and config.
-# If not set, pyUDLF uses ~/.pyudlf/ and downloads the binary on first run.
-# udlf.setBinaryPath("/opt/udlf/bin/udlf")
-# udlf.setConfigPath("/opt/udlf/bin/config.ini")
+# Build from source and point pyUDLF to the binary
+udlf.build_udlf_from_source('/path/to/install', branch='openmp')
+udlf.setBinaryPath('/path/to/install/bin/udlf')
+udlf.setConfigPath('/path/to/install/bin/config.ini')
 ```
 
 ### 2. Configure the input
@@ -131,8 +213,6 @@ input_data.write_config("my_config.ini")
 
 ## Running from an existing config file
 
-You can edit a `config.ini` manually and run it directly:
-
 ```python
 output = udlf.runWithConfig(
     config_file="/path/to/config.ini",
@@ -176,8 +256,6 @@ Example output for query 0 on the MPEG-7 dataset (LHRR, top-10):
 
 ## Grid search
 
-Find the best value for a single parameter by MAP:
-
 ```python
 from pyUDLF.utils import gridSearch
 
@@ -197,25 +275,19 @@ best = gridSearch.find_best_param(
 
 ## Standalone evaluation utilities
 
-These work without running the UDLF binary, useful for evaluating your own ranked lists:
-
 ```python
 from pyUDLF.utils import evaluation, readData
 
-# Load ranked lists and class labels
 rks_before = readData.read_ranked_lists_file_numeric("mpeg7/CFD.txt", top_k=100)
 classes = readData.read_classes("mpeg7/lists_mpeg7.txt", "mpeg7/classes_mpeg7.txt")
 
-# Run UDLF and capture output ranked lists
 output = udlf.run(input_data, get_output=True)
 rks_after = output.get_rks(top_k=100)
 
-# Metrics
 map_score, map_per_query = evaluation.compute_map(rks_after, classes, map_depth=100)
 recall, recall_per_query = evaluation.compute_recall(rks_after, classes, r_depth=10)
 precision, precision_per_query = evaluation.compute_precision(rks_after, classes, p_depth=5)
 
-# Per-element gain between before and after re-ranking
 gain_list = evaluation.compute_gain(
     before_rks=rks_before,
     after_rks=rks_after,
@@ -244,14 +316,6 @@ gain_list = evaluation.compute_gain(
 | `BFSTREE` | UDL | BFS tree |
 | `RDPAC` | UDL, FUSION | Reverse K-NN diffusion with positive and adaptive constraints |
 | `RFE` | UDL, FUSION | Ranked-list feature embedding |
-
----
-
-## Compatibility
-
-- **OS:** Linux, Windows. macOS is not supported.
-- **Python:** 3.10+
-- **Architecture:** x86_64
 
 ---
 

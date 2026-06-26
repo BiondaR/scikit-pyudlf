@@ -42,6 +42,8 @@ if sys.platform.startswith("linux"):
     operating_system = "linux"
 elif sys.platform.startswith("win"):
     operating_system = "windows"
+elif sys.platform == "darwin":
+    operating_system = "macos"
 else:
     operating_system = "unsupported"
     logger.warning("Unsupported operating system detected: %s", sys.platform)
@@ -573,25 +575,83 @@ def run(
             logger.debug(f"Temporary config removed: {input_path}")
 
 def build_udlf_from_source(install_path: str, branch: str = "master") -> bool:
+    """
+    Clona o repositório UDLF, compila via make e instala o binário.
+
+    Args:
+        install_path: diretório onde o binário será instalado (em install_path/bin/).
+        branch: branch do repositório ("master" ou "openmp").
+                No macOS, apenas "master" é suportado.
+
+    Returns:
+        True se instalação bem-sucedida, False caso contrário.
+    """
+    global operating_system
+
+    # macOS não suporta OpenMP
+    if operating_system == "macos" and branch == "openmp":
+        logger.error(
+            "A branch 'openmp' não é suportada no macOS. "
+            "O clang da Apple não suporta -fopenmp nativamente. "
+            "Use branch='master' ou compile manualmente com libomp via Homebrew."
+        )
+        return False
+
+    if operating_system == "windows":
+        logger.error("build_udlf_from_source não é suportado no Windows. O binário pré-compilado é baixado automaticamente via verify_bin().")
+        return False
+
+    if operating_system == "unsupported":
+        logger.error("Sistema operacional não suportado.")
+        return False
+
+    # Checa se g++ está disponível
+    try:
+        subprocess.run(["g++", "--version"], check=True, capture_output=True)
+    except FileNotFoundError:
+        if operating_system == "macos":
+            logger.error("g++ não encontrado. Instale com: xcode-select --install")
+        else:
+            logger.error("g++ não encontrado. Instale com: sudo apt install g++")
+        return False
+
     install_path = Path(install_path)
     repo_path = install_path / "UDLF"
 
-    # clona a branch escolhida
-    subprocess.run(
-        ["git", "clone", "--branch", branch, "--depth", "1",
-         UDLF_REPO, str(repo_path)],
-        check=True
-    )
+    try:
+        logger.info("Clonando UDLF branch '%s'...", branch)
+        subprocess.run(
+            ["git", "clone", "--branch", branch, "--depth", "1",
+             UDLF_REPO, str(repo_path)],
+            check=True
+        )
 
-    # compila — make já sabe onde colocar o binário (bin/udlf)
-    subprocess.run(["make"], cwd=repo_path, check=True)
+        logger.info("Compilando...")
+        subprocess.run(["make"], cwd=repo_path, check=True)
 
-    # copia binário e config pro install_path
-    compiled_bin = repo_path / "bin" / "udlf"
-    compiled_config = repo_path / "bin" / "config.ini"
+        compiled_bin = repo_path / "bin" / "udlf"
+        compiled_config = repo_path / "bin" / "config.ini"
 
-    dest = install_path / "bin"
-    dest.mkdir(exist_ok=True)
-    shutil.copy(compiled_bin, dest / "udlf")
-    shutil.copy(compiled_config, dest / "config.ini")
-    os.chmod(str(dest / "udlf"), 0o755)
+        if not compiled_bin.exists():
+            logger.error("Compilação concluída mas binário não encontrado em: %s", compiled_bin)
+            return False
+
+        dest = install_path / "bin"
+        dest.mkdir(exist_ok=True)
+        shutil.copy(compiled_bin, dest / "udlf")
+        shutil.copy(compiled_config, dest / "config.ini")
+        os.chmod(str(dest / "udlf"), 0o755)
+
+        logger.info("Binário instalado em: %s", dest / "udlf")
+        return True
+
+    except subprocess.CalledProcessError as e:
+        logger.error("Falha durante clone ou compilação: %s", e)
+        return False
+    except Exception as e:
+        logger.error("Erro inesperado em build_udlf_from_source: %s", e)
+        return False
+    finally:
+        if repo_path.exists():
+            shutil.rmtree(repo_path)
+            logger.info("Repositório removido: %s", repo_path)

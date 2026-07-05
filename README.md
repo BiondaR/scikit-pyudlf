@@ -1,10 +1,17 @@
-# pyUDLF — gitclone branch
+<div align="center">
+
+# pyUDLF
+
+**A Python wrapper for the Unsupervised Distance Learning Framework (UDLF)**
+
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)](https://www.python.org/)
+[![License: GPLv2](https://img.shields.io/badge/license-GPLv2-green)](LICENSE)
+
+</div>
 
 Originally developed by **Gustavo Rosseto Leticio**, **Lucas Pascotti Valem** and **Daniel Carlos Guimarães Pedronette** (Universidade Estadual Paulista — UNESP, Rio Claro, Brazil).
 
 Bug fixes and extensions by **Bionda Rozin**.
-
-> This branch extends the [og/bugfixes branch](https://github.com/BiondaR/scikit-pyudlf/tree/og/bugfixes) with support for building the UDLF binary from source. If you just want to use pyUDLF normally, the bugfix branch is the right place — it downloads a pre-compiled binary automatically and requires no additional dependencies.
 
 ---
 
@@ -12,31 +19,57 @@ Bug fixes and extensions by **Bionda Rozin**.
 
 pyUDLF is a Python wrapper for [UDLF](https://github.com/UDLF/UDLF) (Unsupervised Distance Learning Framework), a C++ library implementing graph- and rank-based re-ranking methods that refine distance/similarity structures without supervision.
 
-All heavy computation runs in the UDLF binary. pyUDLF handles configuration, execution, and result parsing — no manual `.ini` editing required.
+This is the **main branch** — the most complete version of pyUDLF. It includes all bug fixes and the source-build support from the other branches, and adds a sklearn-style `UDLF` class that:
 
-This branch adds `build_udlf_from_source()`, which clones the UDLF repository and compiles the binary locally. This gives you access to two builds:
+- accepts **raw feature matrices** directly (no need to pre-compute ranked lists or distance files)
+- exposes **evaluation metrics** (`precision@k`, `recall@k`, `ndcg@k`, `mAP`, `MRR`, `jaccard overlap`) directly on the fitted model
+- supports **comparing** multiple methods on the same dataset in one call
+- follows the `fit` / `transform` / `fit_transform` interface, making it compatible with sklearn pipelines
 
-- **`master`** — same codebase as the pre-compiled binary available in the bugfix branch
-- **`openmp`** — compiled with `-fopenmp`, enabling multi-threaded parallel execution and faster runtimes on multi-core machines
+The low-level API (`run_calls` + `InputType`) is still fully available for cases that need fine-grained control.
 
 > **⚠️ Paths with spaces are not supported.** The UDLF binary does not handle spaces in file paths. Use underscores instead.
 
 ---
 
-## When to use this branch
+## Other branches
+
+| Branch | What it adds |
+|--------|-------------|
+| `og/bugfixes` | Bug fixes over the original pyUDLF. Downloads a pre-compiled binary automatically. Starting point for everything else. |
+| `og/gitclone` | Extends `og/bugfixes` with `build_udlf_from_source()` — clone + compile from the UDLF repo. Enables the OpenMP build and macOS support. |
+| `main` | This branch. Adds the `UDLF` sklearn-style class on top of `og/gitclone`. |
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/BiondaR/scikit-pyudlf.git
+cd scikit-pyudlf
+pip install -r requirements.txt
+python setup.py install
+```
+
+**Requirements:** Python 3.10+, `numpy`, `scikit-learn`, `pandas`, `Pillow`, `requests`.
+
+---
+
+## Building the UDLF binary from source
+
+By default, pyUDLF downloads a pre-compiled binary automatically (Linux and Windows only). You can also build it yourself, which gives you access to two versions:
+
+- **`master`** — same codebase as the pre-compiled binary
+- **`openmp`** — compiled with `-fopenmp`, enabling multi-threaded parallel execution and faster runtimes on multi-core machines
 
 Use `build_udlf_from_source()` if:
 - you want the **OpenMP build** for faster execution
 - you are on **macOS**, where no pre-compiled binary is available (`master` branch only)
 - you want to compile from source for any other reason (custom flags, auditing, etc.)
 
-Otherwise, the bugfix branch handles everything automatically.
+### Additional requirements
 
----
-
-## Additional requirements
-
-Beyond the base requirements (`numpy`, `Pillow`, `requests`), building from source requires:
+Beyond the base requirements, building from source requires:
 
 - `git` — to clone the UDLF repository
 - `g++` with C++14 support — to compile
@@ -53,21 +86,7 @@ xcode-select --install   # installs git and clang++ (aliased as g++)
 
 **Windows:** not supported by `build_udlf_from_source()`. The pre-compiled binary is downloaded automatically via the standard flow — no compilation needed.
 
----
-
-## Installation
-
-```bash
-git clone https://github.com/BiondaR/scikit-pyudlf.git
-cd scikit-pyudlf
-git checkout og/gitclone
-pip install -r requirements.txt
-python setup.py install
-```
-
----
-
-## Building the UDLF binary
+### Usage
 
 ```python
 from pyUDLF import run_calls as udlf
@@ -100,9 +119,7 @@ udlf.setBinaryPath('/path/to/install/bin/udlf')
 udlf.setConfigPath('/path/to/install/bin/config.ini')
 ```
 
----
-
-## OS compatibility
+### OS compatibility for source builds
 
 | OS | Pre-compiled binary | `master` build | `openmp` build |
 |----|---------------------|----------------|----------------|
@@ -114,70 +131,274 @@ macOS users must build from source. The `openmp` branch is not supported on macO
 
 ---
 
-## Tutorial
+## Quick start — `UDLF` class
 
 ### 1. Imports and paths
+
+```python
+from pyUDLF.api import UDLF
+import numpy as np
+
+RKS     = "mpeg7/CFD.txt"
+LISTS   = "mpeg7/lists_mpeg7.txt"
+CLASSES = "mpeg7/classes_mpeg7.txt"
+IMAGES  = "mpeg7/original"
+```
+
+### 2. `__repr__` — inspecting the object
+
+```python
+model = UDLF(task="UDL")
+model.lhrr(L=1000, K=18, T=2)
+print(model)
+# UDLF(task='UDL', method='LHRR', persist=False, status='não executado')
+```
+
+### 3. Fit with `rks_path`
+
+```python
+model = UDLF(
+    task="UDL",
+    rks_path=RKS,
+    list_path=LISTS,
+    classes_path=CLASSES,
+)
+model.lhrr(L=1000, K=18, T=2)
+model.fit()
+
+print(model)
+# UDLF(task='UDL', method='LHRR', persist=False, status='fitted')
+```
+
+### 4. Fit with a feature matrix
+
+```python
+X = np.random.rand(1400, 512)
+y = model.get_labels_from_classes_file()
+
+model2 = UDLF(task="UDL")
+model2.lhrr(L=1000, K=18, T=2)
+model2.fit(X, y)
+```
+
+Passing a pre-computed distance matrix:
+
+```python
+from sklearn.metrics.pairwise import euclidean_distances
+
+dist = euclidean_distances(X, X)
+
+model = UDLF(task="UDL")
+model.lhrr(L=1000, K=18, T=2)
+model.fit(dist, y, distance='precomputed')
+```
+
+### 5. `fit_transform`
+
+```python
+model = UDLF(task="UDL")
+model.lhrr(L=1000, K=18, T=2)
+dist_matrix = model.fit_transform(X, y)   # (1400, 1400) float array
+```
+
+### 6. `get_metrics` — UDLF built-in log
+
+```python
+model = UDLF(task="UDL", rks_path=RKS, list_path=LISTS, classes_path=CLASSES)
+model.lhrr(L=1000, K=18, T=2)
+model.fit()
+
+# dict with Before/After/Gain
+print(model.get_metrics())
+
+# only the After values
+print(model.get_metrics(mode='After'))
+
+# as a DataFrame
+df = model.get_metrics(output_type='df')
+```
+
+### 7. Supervised metrics
+
+```python
+y = model.get_labels_from_classes_file()
+
+print(model.precision_at_k(y=y, k=10))
+print(model.recall_at_k(y=y, k=10))
+print(model.f1_score_at_k(y=y, k=10))
+print(model.average_precision_at_k(y=y, k=10))   # mAP when mode='global'
+print(model.reciprocal_rank(y=y))                 # MRR when mode='global'
+print(model.ndcg_at_k(y=y, k=10))
+```
+
+### 8. Aggregation modes (`global` / `class` / `index`)
+
+```python
+# global — float
+print(model.precision_at_k(y=y, k=10, mode='global'))
+
+# per class — dict {class: score}
+print(model.precision_at_k(y=y, k=10, mode='class'))
+# {'apple': 0.91, 'bat': 0.87, ...}
+
+# per query — dict {index: score}
+print(model.precision_at_k(y=y, k=10, mode='index'))
+# {0: 0.9, 1: 0.8, ...}
+```
+
+Works with all supervised metrics (`recall_at_k`, `f1_score_at_k`, `ndcg_at_k`, `average_precision_at_k`, `reciprocal_rank`).
+
+### 9. Unsupervised metric — `jaccard_overlap_at_k`
+
+Measures how much the top-K neighborhood changed before and after re-ranking. Requires no labels.
+
+```python
+# global
+overlap = model.jaccard_overlap_at_k(k=10)
+print(overlap)   # float in [0, 1] — 1.0 = nothing changed, 0.0 = fully replaced
+
+# per class (requires y)
+overlap_class = model.jaccard_overlap_at_k(y=y, k=10, mode='class')
+```
+
+### 10. Persisting outputs
+
+```python
+model = UDLF(
+    task="UDL",
+    rks_path=RKS,
+    list_path=LISTS,
+    classes_path=CLASSES,
+    persist=True,
+    log_path="outputs/log.txt",
+    output_path="outputs/output",   # extension added automatically
+)
+model.lhrr(L=1000, K=18, T=2)
+model.fit()
+# outputs/output.txt and outputs/log.txt are saved to disk
+```
+
+### 11. Fusion
+
+```python
+FUSION_PATHS = [
+    "mpeg7/CFD.txt", "mpeg7/AIR.txt", "mpeg7/ASC.txt",
+    "mpeg7/BAS.txt", "mpeg7/IDSC.txt", "mpeg7/SS.txt",
+]
+
+model = UDLF(
+    task="FUSION",
+    rks_path=FUSION_PATHS,
+    list_path=LISTS,
+    classes_path=CLASSES,
+    persist=True,
+    log_path="outputs/log_fusion.txt",
+    output_path="outputs/output_fusion",
+)
+model.lhrr(L=1000, K=18, T=2)
+model.fit()
+```
+
+### 12. `compare`
+
+Re-fits all given models on the exact same data and returns a comparison DataFrame:
+
+```python
+model_lhrr = UDLF(task="UDL", rks_path=RKS, list_path=LISTS, classes_path=CLASSES)
+model_lhrr.lhrr(L=1000, K=18, T=2)
+
+model_cprr = UDLF(task="UDL", rks_path=RKS, list_path=LISTS, classes_path=CLASSES)
+model_cprr.cprr(L=400, K=20, T=2)
+
+results = UDLF.compare({
+    "LHRR(K=18)": model_lhrr,
+    "CPRR(K=20)": model_cprr,
+}, k=10)
+results
+```
+
+It also works with unfitted models plus `X`/`y`:
+
+```python
+model_lhrr = UDLF(task="UDL")
+model_lhrr.lhrr(L=1000, K=18, T=2)
+
+model_cprr = UDLF(task="UDL")
+model_cprr.cprr(L=400, K=20, T=2)
+
+results = UDLF.compare({
+    "LHRR": model_lhrr,
+    "CPRR": model_cprr,
+}, X=X, y=y, k=10)
+results
+```
+
+---
+
+## Low-level API — UDL
 
 ```python
 from pyUDLF import run_calls as udlf
 from pyUDLF.utils import inputType as it
 
-# Build from source and point pyUDLF to the binary
-udlf.build_udlf_from_source('/path/to/install', branch='openmp')
-udlf.setBinaryPath('/path/to/install/bin/udlf')
-udlf.setConfigPath('/path/to/install/bin/config.ini')
-```
-
-### 2. Configure the input
-
-```python
 input_data = it.InputType()
-
-# Method and parameters
 input_data.set_method_name("LHRR")
 input_data.set_method_parameters("LHRR", k=18, l=1000, t=2)
 input_data.set_task("UDL")
-
-# Dataset files — no spaces in paths
 input_data.set_input_files("mpeg7/CFD.txt")
 input_data.set_input_images_path("mpeg7/original")
 input_data.set_lists_file("mpeg7/lists_mpeg7.txt")
 input_data.set_classes_file("mpeg7/classes_mpeg7.txt")
 input_data.set_dataset_size(1400)
-
-# Output
 input_data.set_output_file(True)
-input_data.set_output_file_format("RK")   # "RK" or "MATRIX"
+input_data.set_output_file_format("RK")   # or "MATRIX"
 input_data.set_output_rk_format("NUM")
 input_data.set_output_file_path("./output")
 input_data.set_output_log_file_path("./log.txt")
-
-# Effectiveness evaluation
 input_data.set_effectiveness_eval(True)
 input_data.set_effectiveness_compute_map(True)
-```
 
-### 3. Run
-
-```python
 output = udlf.run(input_data, get_output=True)
+output.print_log()
+rks = output.get_rks(top_k=100)
+log = output.get_log()
+print(log["MAP"]["After"])
+
+# matrix = output.get_matrix()  — use with set_output_file_format("MATRIX")
 ```
 
-### 4. Retrieve results
+---
+
+## Low-level API — FUSION
 
 ```python
-# Print the full log (MAP, Precision@K, Recall@K, time)
-output.print_log()
+input_data = it.InputType()
+input_data.set_method_name("LHRR")
+input_data.set_method_parameters("LHRR", k=18, l=1000, t=2)
+input_data.set_task("FUSION")
+input_data.set_input_files([
+    "mpeg7/CFD.txt", "mpeg7/AIR.txt", "mpeg7/ASC.txt",
+    "mpeg7/BAS.txt", "mpeg7/IDSC.txt", "mpeg7/SS.txt"
+])
+input_data.set_input_images_path("mpeg7/original")
+input_data.set_lists_file("mpeg7/lists_mpeg7.txt")
+input_data.set_classes_file("mpeg7/classes_mpeg7.txt")
+input_data.set_dataset_size(1400)
+input_data.set_output_file(True)
+input_data.set_output_file_format("RK")
+input_data.set_output_rk_format("NUM")
+input_data.set_output_file_path("./output")
+input_data.set_output_log_file_path("./log.txt")
+input_data.set_effectiveness_eval(True)
+input_data.set_effectiveness_compute_map(True)
 
-# Ranked lists as a numpy array (top_k elements per query)
+output = udlf.run(input_data, get_output=True)
+output.print_log()
+log = output.get_log()
+print(log)
 rks = output.get_rks(top_k=100)
 
-# Log as a dictionary
-log = output.get_log()
-print(log["MAP"]["After"])   # also: "Before", "Gain"
-
-# Distance/similarity matrix — only when output format is "MATRIX"
-# matrix = output.get_matrix()
+# matrix = output.get_matrix()  — use with set_output_file_format("MATRIX")
 ```
 
 ---
@@ -301,70 +522,183 @@ gain_list = evaluation.compute_gain(
 
 ---
 
-### Configuring input for fusion task
+## Methods and parameters
 
-```python
+### [NONE](https://github.com/UDLF/UDLF/wiki/Methods) — baseline passthrough
+`model.set_none(L=1400)`
 
-input_data = it.InputType()
-
-# Method and parameters
-input_data.set_method_name("LHRR")
-input_data.set_method_parameters("LHRR", k=18, l=1000, t=2)
-input_data.set_task("FUSION")
-
-# Dataset files — no spaces in paths
-input_data.set_input_files(["mpeg7/CFD.txt", "mpeg7/AIR.txt", "mpeg7/ASC.txt", "mpeg7/BAS.txt", "mpeg7/IDSC.txt", "mpeg7/SS.txt"])
-input_data.set_input_images_path("mpeg7/original")
-input_data.set_lists_file("mpeg7/lists_mpeg7.txt")
-input_data.set_classes_file("mpeg7/classes_mpeg7.txt")
-input_data.set_dataset_size(1400)
-
-# Output
-input_data.set_output_file(True)
-input_data.set_output_file_format("RK")
-input_data.set_output_rk_format("NUM")
-input_data.set_output_file_path("./output")
-input_data.set_output_log_file_path("./log.txt")
-
-# Effectiveness evaluation
-input_data.set_effectiveness_eval(True)
-input_data.set_effectiveness_compute_map(True)
-
-# Run
-output = udlf.run(input_data, get_output=True)
-
-# Print the full log (MAP, Precision@K, Recall@K, time)
-output.print_log()
-
-# Log as a dictionary
-log = output.get_log()
-print(log)
-
-# Ranked lists as a numpy array (top_k elements per query)
-rks = output.get_rks(top_k=100)
-
-# Distance/similarity matrix — only when output format is "MATRIX"
-# matrix = output.get_matrix()
-```
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 1400 | Ranked list size |
 
 ---
 
-## Available methods
+### [CPRR](http://dx.doi.org/10.1109/SIBGRAPI.2016.042)
+`model.cprr(L=400, K=20, T=2)`
 
-| Method | Task | Description |
-|--------|------|-------------|
-| `NONE` | UDL | Baseline passthrough |
-| `CPRR` | UDL | Contextual re-ranking by reciprocal ranks |
-| `LHRR` | UDL, FUSION | Log-based hypergraph of ranking references — generally strong |
-| `RLSIM` | UDL, FUSION | Ranked list similarity (multiple metrics) |
-| `RLRECOM` | UDL | Ranked list recommendation |
-| `CONTEXTRR` | UDL, FUSION | Contextual re-ranking with reciprocal references |
-| `RECKNNGRAPH` | UDL, FUSION | Reciprocal K-NN graph |
-| `RKGRAPH` | UDL, FUSION | Ranked-list graph |
-| `CORGRAPH` | UDL, FUSION | Correlation graph |
-| `BFSTREE` | UDL | BFS tree |
-| `RDPAC` | UDL, FUSION | Reverse K-NN diffusion with positive and adaptive constraints |
-| `RFE` | UDL, FUSION | Ranked-list feature embedding |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 400 | Ranked list size |
+| `K` | 20 | Neighborhood size |
+| `T` | 2 | Number of iterations |
+
+---
+
+### [LHRR](http://doi.org/10.1109/TIP.2019.2920526)
+`model.lhrr(L=1400, K=18, T=2)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 1400 | Ranked list size |
+| `K` | 18 | Neighborhood size |
+| `T` | 2 | Number of iterations |
+
+---
+
+### [RL-Sim*](http://dx.doi.org/10.1145/2671188.2749335)
+`model.rlsim(TOPK=15, CK=700, T=3, METRIC='INTERSECTION')`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `TOPK` | 15 | Top-K neighbors for similarity |
+| `CK` | 700 | Context size |
+| `T` | 3 | Number of iterations |
+| `METRIC` | `'INTERSECTION'` | `INTERSECTION`, `RBO`, `KENDALL_TAU`, `SPEARMAN`, `GOODMAN`, `JACCARD`, `JACCARD_K`, `KENDALL_TAU_W` |
+
+---
+
+### [RL-Recom](http://dx.doi.org/10.1145/2671188.2749336) *(UDL only)*
+`model.rlrecom(L=400, K=8, EPS=0.0125, LAMBDA=2.0)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 400 | Ranked list size |
+| `K` | 8 | Neighborhood size |
+| `EPS` | 0.0125 | Convergence threshold |
+| `LAMBDA` | 2.0 | Regularization weight |
+
+---
+
+### [ContextRR](http://dl.acm.org/citation.cfm?id=1948207.1948291)
+`model.contextrr(L=25, K=7, T=5, NBYK=1, OPTIMIZATIONS=True)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 25 | Ranked list size |
+| `K` | 7 | Neighborhood size |
+| `T` | 5 | Number of iterations |
+| `NBYK` | 1 | N/K ratio |
+| `OPTIMIZATIONS` | `True` | Enable speed optimizations |
+
+---
+
+### [ReckNNGraph](http://dx.doi.org/10.1016/j.imavis.2013.12.009)
+`model.recknngraph(L=200, K=15, EPS=0.0125)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 200 | Ranked list size |
+| `K` | 15 | Neighborhood size |
+| `EPS` | 0.0125 | Convergence threshold |
+
+---
+
+### [Rk Graph Dist.](http://dx.doi.org/10.1016/j.patrec.2016.05.021)
+`model.rkgraph(L=700, K=20, T=1, P=0.95)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 700 | Ranked list size |
+| `K` | 20 | Neighborhood size |
+| `T` | 1 | Number of iterations |
+| `P` | 0.95 | RBO probability threshold |
+
+---
+
+### [Correlation Graph](http://dx.doi.org/10.1016/j.neucom.2016.03.081)
+`model.corgraph(L=200, K=25, TH_START=0.35, TH_END=1.0, TH_INC=0.005, CORRELATION='PEARSON')`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 200 | Ranked list size |
+| `K` | 25 | Neighborhood size |
+| `TH_START` | 0.35 | Threshold start |
+| `TH_END` | 1.0 | Threshold end |
+| `TH_INC` | 0.005 | Threshold increment |
+| `CORRELATION` | `'PEARSON'` | `PEARSON` or `RBO` |
+
+---
+
+### [BFSTree](https://doi.org/10.1016/j.patcog.2020.107666) *(UDL only)*
+`model.bfstree(L=1400, K=20, CORRELATION='RBO')`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 1400 | Ranked list size |
+| `K` | 20 | Neighborhood size |
+| `CORRELATION` | `'RBO'` | Only `RBO` currently supported |
+
+---
+
+### [RDPAC](https://doi.org/10.3390/jimaging7030049)
+`model.rdpac(L=400, L_MULT=2, P=0.60, PL=0.99, K_START=1, K_INC=1, K=15)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 400 | Ranked list size |
+| `L_MULT` | 2 | L multiplier |
+| `P` | 0.60 | Probability threshold |
+| `PL` | 0.99 | Probability lower bound |
+| `K_START` | 1 | K range start |
+| `K_INC` | 1 | K range increment |
+| `K` | 15 | K range end |
+
+---
+
+### [RFE](https://doi.org/10.1109/TIP.2023.3268868)
+`model.rfe(L=400, K=20, T=2, PA=0.1, TH_CC=0, RK_BY_EMB=False, EXPORT_EMBS=False, PERF_CCS=True, EMB_PATH='embeddings.txt', CCS_PATH='ccs.txt')`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `L` | 400 | Ranked list size |
+| `K` | 20 | Neighborhood size |
+| `T` | 2 | Number of iterations |
+| `PA` | 0.1 | Positive-pair acceptance rate |
+| `TH_CC` | 0 | Connected components threshold |
+| `RK_BY_EMB` | `False` | Re-rank by embedding distance |
+| `EXPORT_EMBS` | `False` | Export learned embeddings |
+| `PERF_CCS` | `True` | Perform connected components |
+| `EMB_PATH` | `'embeddings.txt'` | Embeddings output path |
+| `CCS_PATH` | `'ccs.txt'` | CCS output path |
+
+---
+
+## Method compatibility
+
+| Method | UDL | FUSION |
+|--------|-----|--------|
+| NONE | ✅ | ❌ |
+| CPRR | ✅ | ✅ |
+| LHRR | ✅ | ✅ |
+| RL-Sim* | ✅ | ✅ |
+| RL-Recom | ✅ | ❌ |
+| ContextRR | ✅ | ✅ |
+| ReckNNGraph | ✅ | ✅ |
+| Rk Graph Dist. | ✅ | ✅ |
+| Correlation Graph | ✅ | ✅ |
+| BFSTree | ✅ | ❌ |
+| RDPAC | ✅ | ✅ |
+| RFE | ✅ | ✅ |
+
+---
+
+## Compatibility
+
+| | |
+|---|---|
+| **OS** | Linux, Windows (pre-compiled binary). macOS supported via `build_udlf_from_source()`. |
+| **Python** | 3.10+ |
+| **Architecture** | x86_64 |
 
 ---
 

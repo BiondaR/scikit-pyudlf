@@ -1,8 +1,8 @@
 <div align="center">
 
-# pyUDLF
+# scikit-pyUDLF
 
-**A Python wrapper for the Unsupervised Distance Learning Framework (UDLF)**
+**A friendlier fork of pyUDLF — sklearn API, source builds, and bug fixes**
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)](https://www.python.org/)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-green)](LICENSE)
@@ -722,6 +722,19 @@ If you use this software, please cite the original pyUDLF paper:
     series = {MM '23}
 }
 ```
+
+## Acknowledgments
+
+The authors are grateful to São Paulo Research Foundation – FAPESP (grants 2013/08645-0, 2014/04220-8, 2018/15597-6) and Brazilian National Council for Scientific and Technological Development – CNPq (grants 309439/2020-5 and 422667/2021-8).
+
+## Contact
+**Gustavo Rosseto Leticio**: `gustavo.leticio@gmail.com` or `gustavo.leticio@unesp.br`
+
+**Lucas Pascotti Valem**: `lucas@icmc.usp.br`
+
+**Daniel Carlos Guimarães Pedronette**: `daniel.pedronette@unesp.br`
+
+**Bionda Rozin**: `bionda.rozin@unesp.br`
 
 ## License
 

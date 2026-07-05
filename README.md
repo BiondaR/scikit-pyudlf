@@ -301,6 +301,54 @@ gain_list = evaluation.compute_gain(
 
 ---
 
+### Configuring input for fusion task
+
+```python
+
+input_data = it.InputType()
+
+# Method and parameters
+input_data.set_method_name("LHRR")
+input_data.set_method_parameters("LHRR", k=18, l=1000, t=2)
+input_data.set_task("FUSION")
+
+# Dataset files — no spaces in paths
+input_data.set_input_files(["mpeg7/CFD.txt", "mpeg7/AIR.txt", "mpeg7/ASC.txt", "mpeg7/BAS.txt", "mpeg7/IDSC.txt", "mpeg7/SS.txt"])
+input_data.set_input_images_path("mpeg7/original")
+input_data.set_lists_file("mpeg7/lists_mpeg7.txt")
+input_data.set_classes_file("mpeg7/classes_mpeg7.txt")
+input_data.set_dataset_size(1400)
+
+# Output
+input_data.set_output_file(True)
+input_data.set_output_file_format("RK")
+input_data.set_output_rk_format("NUM")
+input_data.set_output_file_path("./output")
+input_data.set_output_log_file_path("./log.txt")
+
+# Effectiveness evaluation
+input_data.set_effectiveness_eval(True)
+input_data.set_effectiveness_compute_map(True)
+
+# Run
+output = udlf.run(input_data, get_output=True)
+
+# Print the full log (MAP, Precision@K, Recall@K, time)
+output.print_log()
+
+# Log as a dictionary
+log = output.get_log()
+print(log)
+
+# Ranked lists as a numpy array (top_k elements per query)
+rks = output.get_rks(top_k=100)
+
+# Distance/similarity matrix — only when output format is "MATRIX"
+# matrix = output.get_matrix()
+```
+
+---
+
 ## Available methods
 
 | Method | Task | Description |

@@ -6,6 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)](https://www.python.org/)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-green)](LICENSE)
+[![Status](https://img.shields.io/badge/status-alpha-orange)]()
 
 </div>
 

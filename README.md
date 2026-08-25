@@ -705,6 +705,11 @@ gain_list = evaluation.compute_gain(
 
 ---
 
+## ✨ **Part of the `not-just-timeseries` ecosystem** ✨
+> This repository is a standalone package within a larger multimodal hub for time series and multimedia data. Check out the [main repository](https://github.com/BiondaR/not-just-timeseries) to explore other focused tools for distance metrics, feature extraction, and unsupervised re-ranking.
+
+---
+
 ## Citation
 
 If you use this software, please cite the original pyUDLF paper:

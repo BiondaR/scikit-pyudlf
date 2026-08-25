@@ -1,6 +1,7 @@
 from pyUDLF import run_calls as udlf
 from pyUDLF.utils import inputType as it
-from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.neighbors import NearestNeighbors
+import hnswlib
 import numpy as np
 import pandas as pd
 import os
@@ -207,15 +208,34 @@ class UDLF:
                     self._temp_dir = tempfile.mkdtemp()
                 
                 # A. Process Matrix X
+                n = X.shape[0]
                 if distance == 'precomputed':
                     if X.shape[0] != X.shape[1]:
                         raise ValueError('The distance matrix must be square!')
-                    else:
-                        dist_matrix = X   
-                else: 
-                    dist_matrix = euclidean_distances(X, X)
+                    output_matrix = X
+                    fmt, input_format = '%.1f', "MATRIX"   
+                elif n < 5000:
+                    print("n < 5000, using balltree")
+                    nn = NearestNeighbors(n_neighbors=n, algorithm='ball_tree', metric='euclidean')
+                    nn.fit(X)
+                    dist, idx = nn.kneighbors(X)
+                    output_matrix = np.empty_like(dist)
+                    output_matrix[np.repeat(np.arange(n), n), idx.ravel()] = dist.ravel()
+                    fmt, input_format = '%.1f', "MATRIX"
+                else:
+                    print("n >= 5000, using ann (hnsw)")
+                    L = min(n - 1, 1000)
+                    index = hnswlib.Index(space='l2', dim=X.shape[1])
+                    index.init_index(max_elements=n, ef_construction=200, M=16)
+                    index.add_items(X, np.arange(n))
+                    index.set_ef(max(2 * L, 50))
+                    labels, _ = index.knn_query(X, k=L + 1)
+                    output_matrix = np.array([[j for j in row if j != i][:L] for i, row in enumerate(labels)])
+                    fmt, input_format = '%d', "RK"
+
                 temp_rks = os.path.join(self._temp_dir, "input_dist.txt")
-                np.savetxt(temp_rks, dist_matrix, fmt='%.1f')
+                np.savetxt(temp_rks, output_matrix, fmt=fmt)
+
 
                 temp_list = os.path.join(self._temp_dir, "list.txt")
                 np.savetxt(temp_list, np.arange(X.shape[0]), fmt='%d')
@@ -229,7 +249,7 @@ class UDLF:
                         for i, label in enumerate(y):
                             f.write(f"{i}:{label}\n")
 
-                self._set_inputs(rks_path=temp_rks, list_path=temp_list, classes_path=temp_classes, images_path="", input_format="MATRIX")
+                self._set_inputs(rks_path=temp_rks, list_path=temp_list, classes_path=temp_classes, images_path="", input_format=input_format)
         
         # Now get_output=True to retrieve the logs from code
         self.output_data = udlf.run(
@@ -249,7 +269,7 @@ class UDLF:
             
         if getattr(self, '_cached_matrix', None) is None:
             txt_path = self.input_data.get_output_file_path()[0] + '.txt'
-            self._cached_matrix = np.loadtxt(txt_path)
+            self._cached_matrix = pd.read_csv(txt_path, sep=r'\s+', header=None, engine='c', dtype=np.float32).values
             
         return self._cached_matrix
 

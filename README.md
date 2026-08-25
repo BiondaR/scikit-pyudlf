@@ -52,7 +52,7 @@ pip install -r requirements.txt
 python setup.py install
 ```
 
-**Requirements:** Python 3.10+, `numpy`, `scikit-learn`, `pandas`, `Pillow`, `requests`.
+**Requirements:** Python 3.10+, `numpy`, `scikit-learn`, `pandas`, `Pillow`, `requests`, `hnswlib`.
 
 ---
 
@@ -181,6 +181,8 @@ model2 = UDLF(task="UDL")
 model2.lhrr(L=1000, K=18, T=2)
 model2.fit(X, y)
 ```
+
+> From 5000 elements onward, `fit()` generates the input ranked list with HNSW (approximate, top-1000) instead of a full dense matrix, to keep memory and runtime manageable. Below that threshold it uses an exact BallTree. To force exact results regardless of size, pass `distance='precomputed'` with your own distance matrix.
 
 Passing a pre-computed distance matrix:
 
